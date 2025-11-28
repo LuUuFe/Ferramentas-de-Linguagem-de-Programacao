@@ -3,22 +3,32 @@ from typing import List
 from abc import ABC, abstractmethod
 
 
+# --- Custom Exceptions ---
 class BankingError(Exception):
+    """Base class for all banking system exceptions."""
+
     pass
 
 
 class InsufficientFundsError(BankingError):
+    """Raised when an account has insufficient funds for a transaction."""
+
     pass
 
 
-class InvalidAmountError(BankingError):
+class InvalidTransactionError(BankingError):
+    """Raised when a transaction value is invalid (e.g., negative amount)."""
+
     pass
 
 
 class InvalidBranchError(BankingError):
+    """Raised when an invalid object is passed as a Branch."""
+
     pass
 
 
+# --- System Classes ---
 class Bank:
     def __init__(self, name: str, cnpj: str, location: str, phone: str):
         self._name = name
@@ -60,11 +70,13 @@ class Bank:
         self._phone = value
 
     def add_branch(self, branch: "Branch"):
+        """Registers a new branch. Raises InvalidBranchError if type is incorrect."""
         if not isinstance(branch, Branch):
             raise InvalidBranchError(
-                f"Expected Branch object, got {type(branch).__name__}"
+                f"Expected Branch instance, got {type(branch).__name__}."
             )
         self._branch.append(branch)
+        print("Branch added successfully")
 
     def show_branches(self):
         for branch in self._branch:
@@ -276,15 +288,19 @@ class Current_account(Account, Tax):
         self._tax = value
 
     def withdraw(self, value: float):
+        """
+        Withdraws value + tax if sufficient funds (balance + limit) are available.
+        Raises InvalidTransactionError or InsufficientFundsError.
+        """
         if value <= 0:
-            raise InvalidAmountError("Withdrawal amount must be positive.")
+            raise InvalidTransactionError("Withdrawal amount must be positive.")
 
         total_withdrawal = value + self._tax
         available_funds = self._balance + self._limit
 
         if total_withdrawal > available_funds:
             raise InsufficientFundsError(
-                f"Insufficient funds. Available: {available_funds}, Required: {total_withdrawal}"
+                f"Cannot withdraw {total_withdrawal}. Available: {available_funds}"
             )
 
         self._balance -= total_withdrawal
@@ -295,7 +311,7 @@ class Current_account(Account, Tax):
 
     def deposit(self, value: float):
         if value <= 0:
-            raise InvalidAmountError("Deposit amount must be positive.")
+            raise InvalidTransactionError("Deposit amount must be positive.")
         self._balance += value
 
     def get_tax_value(self):
@@ -312,3 +328,16 @@ class Savings_account(Account, Earning):
 
     def get_earning(self):
         pass
+
+    def withdraw(self, value: float):
+        if value <= 0:
+            raise InvalidTransactionError("Withdrawal amount must be positive.")
+        if value > self._balance:
+            raise InsufficientFundsError("Insufficient funds in savings account.")
+
+        self._balance -= value
+
+    def deposit(self, value: float):
+        if value <= 0:
+            raise InvalidTransactionError("Deposit amount must be positive.")
+        self._balance += value
